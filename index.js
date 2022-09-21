@@ -6,47 +6,11 @@ const fs = require("fs");
 const puppeteer = require("puppeteer");
 const appConfig = require("./config");
 
-async function retrieveRawTableData() {
-  const browser = await puppeteer.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
-
-  await page.goto(appConfig.url);
-  await page.type("#Password", appConfig.password);
-  await page.click(".submitBtn");
-  await page.waitForNetworkIdle();
-  await page.goto(appConfig.url + "/?device_connection&mid=ConnectedDevices");
-  await page.waitForNetworkIdle();
-  const rows = await page.evaluate(() =>
-    Array.from(
-      document.querySelectorAll(
-        'table[id="AttachedDevicesTable"] > tbody > tr'
-      ),
-      (row) =>
-        Array.from(row.querySelectorAll("th, td"), (cell) => [cell.innerText])
-    )
-  );
-  await page.click("#logout > a");
-  await browser.close();
-  return rows;
-}
-
 // set mqtt info
 const clientId = `mqtt_ziggo_gigabox_tracker`;
 const connectUrl = `mqtt://${C.host}:${C.port}`;
-// connect to mqtt
-// const client = mqtt.connect(connectUrl, {
-//   clientId,
-//   clean: true,
-//   connectTimeout: 4000,
-//   username: C.mqtt_user,
-//   password: C.mqtt_password,
-//   reconnectPeriod: 1000,
-// });
-// Create MQTT template for home assistant mqtt topic
 
-function refreshmqtt() {
+function openMqttClient() {
   return mqtt.connect(connectUrl, {
     clientId,
     clean: true,
@@ -55,6 +19,30 @@ function refreshmqtt() {
     password: C.mqtt_password,
     reconnectPeriod: 1000,
   });
+}
+
+async function retrieveRawTableData() {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+
+  await page.goto(appConfig.url); // open c.url
+  await page.type("#Password", appConfig.password); //type password in box
+  await page.click(".submitBtn"); // submit
+  await page.waitForNetworkIdle(); // wait for it all to load
+  await page.goto(appConfig.url + "/?device_connection&mid=ConnectedDevices"); // nav to devices page
+  await page.waitForNetworkIdle(); // wait again
+  const rows = await page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll(
+        'table[id="AttachedDevicesTable"] > tbody > tr'
+      ),
+      (row) =>
+        Array.from(row.querySelectorAll("th, td"), (cell) => [cell.innerText])
+    )
+  ); // extract devices table
+  await page.click("#logout > a"); // logout from interface to prevent blocking
+  await browser.close(); // close browser
+  return rows;
 }
 
 // create new dev in HA format, outputs json
@@ -79,7 +67,7 @@ function HomeAssistantFactory(Name, Mac) {
 }
 
 // create string from HomeAssistantFactory(Name, Mac) and send it to mqtt.
-function publishToHA(Name, Mac, client) {
+function publishToHATopic(Name, Mac, client) {
   client.publish(
     `homeassistant/device_tracker/ziggo-tracker/${Mac}_tracker/config`,
     HomeAssistantFactory(Name, Mac),
@@ -93,7 +81,7 @@ function publishToHA(Name, Mac, client) {
 }
 
 // send state to mqtt
-function publishToZiggoTracker(Mac, state, client) {
+function publishToZiggoTopic(Mac, state, client) {
   client.publish(
     `ziggo-tracker/device_tracker/${Mac}_tracker/state`,
     state,
@@ -106,40 +94,44 @@ function publishToZiggoTracker(Mac, state, client) {
   );
 }
 
-function send2mqtt(Name, Mac, State) {
-  const client = refreshmqtt();
-  publishToZiggoTracker(Mac, State, client);
-  publishToHA(Name, Mac, client);
+function updateAllMqttTopics(Name, Mac, State) {
+  const client = openMqttClient();
+  publishToZiggoTopic(Mac, State, client);
+  publishToHATopic(Name, Mac, client);
 
   var currentdate = new Date();
-  var datetime =
+  console.log(
     currentdate.getDate() +
-    "/" +
-    (currentdate.getMonth() + 1) +
-    "/" +
-    currentdate.getFullYear() +
-    " @ " +
-    currentdate.getHours() +
-    ":" +
-    currentdate.getMinutes() +
-    ":" +
-    currentdate.getSeconds() +
-    `${Mac} (${Name}) has been updated to: "${State}"`;
-
-  console.log(datetime);
+      "/" +
+      (currentdate.getMonth() + 1) +
+      "/" +
+      currentdate.getFullYear() +
+      " @ " +
+      currentdate.getHours() +
+      ":" +
+      currentdate.getMinutes() +
+      ":" +
+      currentdate.getSeconds() +
+      `${Mac} (${Name}) has been updated to: "${State}"`
+  );
 }
 
 async function main() {
-  // getting new data array
+  // getting data array's & macs
   let newDataRaw = JSON.stringify(await retrieveRawTableData());
   let newDataArray = JSON.parse(newDataRaw);
+
+  // looping trough array to extract macs and push them into own array
   let newMacs = [];
   newDataArray.forEach((element) => {
     newMacs.push(element[1][0]);
   });
-  // old data array
+
+  // getting old data array & macs
   let oldDataRaw = fs.readFileSync("devices.json", "utf8");
   let oldDataArray = JSON.parse(oldDataRaw);
+
+  // looping trough array to extract macs and push them into own array
   let oldMacs = [];
   oldDataArray.forEach((element) => {
     oldMacs.push(element[1][0]);
@@ -148,11 +140,12 @@ async function main() {
   // check 2 mac lists to see which device has gone online or offline
   let GoneSinceLastScan = oldMacs.filter((x) => !newMacs.includes(x));
   let AppearedSinceLastScan = newMacs.filter((x) => !oldMacs.includes(x));
+
   GoneSinceLastScan.forEach((e) => {
     // getting info of object
     oldDataArray.forEach((element) => {
       if (element[1] == e) {
-        send2mqtt(element[0][0], e.replaceAll(":", ""), "not_home");
+        updateAllMqttTopics(element[0][0], e.replaceAll(":", ""), "not_home"); // replace all to cleanup mac-format for mqtt support
       }
     });
   });
@@ -161,18 +154,18 @@ async function main() {
     // getting info of object
     newDataArray.forEach((element) => {
       if (element[1] == e) {
-        send2mqtt(element[0][0], e.replaceAll(":", ""), "home");
+        updateAllMqttTopics(element[0][0], e.replaceAll(":", ""), "home"); // replace all to cleanup mac-format for mqtt support
       }
     });
   });
-  // writing back new list to json
+
+  // writing back new list of devices to json file
   fs.writeFileSync("devices.json", JSON.stringify(newDataArray));
 }
 
 (function loop() {
   setTimeout(function () {
-    // execute script
     main();
     loop();
-  }, 90000); //9000 = 9000ms = 9s
+  }, 90000); // timeout in ms
 })();
