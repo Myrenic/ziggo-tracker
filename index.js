@@ -112,7 +112,7 @@ function updateAllMqttTopics(Name, Mac, State) {
       currentdate.getMinutes() +
       ":" +
       currentdate.getSeconds() +
-      `${Mac} (${Name}) has been updated to: "${State}"`
+      ` ${Mac} (${Name}) has been updated to: "${State}"`
   );
 }
 
