@@ -1,22 +1,21 @@
 "use strict";
 
 const mqtt = require("mqtt");
-const C = require("./config");
 const fs = require("fs");
 const puppeteer = require("puppeteer");
 const appConfig = require("./config");
 
 // set mqtt info
 const clientId = `mqtt_ziggo_gigabox_tracker`;
-const connectUrl = `mqtt://${C.host}:${C.port}`;
+const connectUrl = `mqtt://${appConfig.host}:${appConfig.port}`;
 
 function openMqttClient() {
   return mqtt.connect(connectUrl, {
     clientId,
     clean: true,
     connectTimeout: 4000,
-    username: C.mqtt_user,
-    password: C.mqtt_password,
+    username: appConfig.mqtt_user,
+    password: appConfig.mqtt_password,
     reconnectPeriod: 1000,
   });
 }
@@ -25,7 +24,7 @@ async function retrieveRawTableData() {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
-  await page.goto(appConfig.url); // open c.url
+  await page.goto(appConfig.url); // open appConfig.url
   await page.type("#Password", appConfig.password); //type password in box
   await page.click(".submitBtn"); // submit
   await page.waitForNetworkIdle(); // wait for it all to load
