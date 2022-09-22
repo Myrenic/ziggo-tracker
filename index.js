@@ -64,7 +64,12 @@ async function main() {
 
 (function loop() {
   setTimeout(function () {
-    main();
-    loop();
+    try {
+      main();
+    } catch (error) {
+      console.log("Error! ", error);
+    } finally {
+      loop();
+    }
   }, 90000); // timeout in ms
 })();

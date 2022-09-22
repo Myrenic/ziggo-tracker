@@ -20,9 +20,14 @@ async function retrieveRawTableData() {
         Array.from(row.querySelectorAll("th, td"), (cell) => [cell.innerText])
     )
   ); // extract devices table
-  await page.click("#logout > a"); // logout from interface to prevent blocking
-  await browser.close(); // close browser
-  return rows;
+  try {
+    await page.click("#logout > a"); // logout from interface to prevent blocking
+  } catch (error) {
+    console.log("Could not log out due to an error, skipping");
+  } finally {
+    await browser.close(); // close browser
+    return rows;
+  }
 }
 
 module.exports = { retrieveRawTableData };
