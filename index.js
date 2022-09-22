@@ -64,6 +64,7 @@ async function main() {
 
 (function loop() {
   setTimeout(function () {
+    console.log(`Starting to track ${appConfig.host}.`);
     try {
       main();
     } catch (error) {
