@@ -62,9 +62,9 @@ async function main() {
   fs.writeFileSync("./storage/devices.json", JSON.stringify(newDataArray));
 }
 
+console.log(`Starting to track ${appConfig.host}.`);
 (function loop() {
   setTimeout(function () {
-    console.log(`Starting to track ${appConfig.host}.`);
     try {
       main();
     } catch (error) {
