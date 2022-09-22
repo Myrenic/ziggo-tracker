@@ -1,10 +1,10 @@
 "use strict";
 
 const fs = require("fs");
-const appConfig = require("./config/config");
 const checkEnvironmentVariables = require("./libs/envChecker");
 const mqttFunctions = require("./libs/mqttFunctions");
 const puppeteerFunctions = require("./libs/puppeteerFunctions");
+
 async function main() {
   // getting data array's & macs
   let newDataRaw = JSON.stringify(
@@ -63,7 +63,7 @@ async function main() {
 }
 
 checkEnvironmentVariables();
-console.log(`Starting to track ${appConfig.host}.`);
+console.log(`Starting to track ${process.env.router_url}.`);
 (function loop() {
   setTimeout(function () {
     try {
