@@ -2,9 +2,9 @@
 
 const fs = require("fs");
 const appConfig = require("./config/config");
+const checkEnvironmentVariables = require("./libs/envChecker");
 const mqttFunctions = require("./libs/mqttFunctions");
 const puppeteerFunctions = require("./libs/puppeteerFunctions");
-
 async function main() {
   // getting data array's & macs
   let newDataRaw = JSON.stringify(
@@ -62,6 +62,7 @@ async function main() {
   fs.writeFileSync("./storage/devices.json", JSON.stringify(newDataArray));
 }
 
+checkEnvironmentVariables();
 console.log(`Starting to track ${appConfig.host}.`);
 (function loop() {
   setTimeout(function () {
