@@ -9,8 +9,6 @@ All the other ziggo device trackers didn't work for me, so i created my own.
 
     ziggotracker:
     image: ghcr.io/myrenic/ziggo-tracker:docker-EnvironmentVariables
-    volumes:
-      - ziggotracker:/usr/src/app/config:rw
     environment:
       - router_url=http://192.168.178.1
       - router_password=
