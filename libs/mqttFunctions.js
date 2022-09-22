@@ -1,17 +1,16 @@
 const mqtt = require("mqtt");
-const appConfig = require("../config/config");
 
 // set mqtt info
 const clientId = `mqtt_ziggo_gigabox_tracker`;
-const connectUrl = `mqtt://${appConfig.host}:${appConfig.port}`;
+const connectUrl = `mqtt://${process.env.router_url}:${process.env.mqtt_port}`;
 
 function openMqttClient() {
   return mqtt.connect(connectUrl, {
     clientId,
     clean: true,
     connectTimeout: 4000,
-    username: appConfig.mqtt_user,
-    password: appConfig.mqtt_password,
+    username: process.env.mqtt_user,
+    password: process.env.mqtt_password,
     reconnectPeriod: 1000,
   });
 }

@@ -1,7 +1,7 @@
 "use strict";
 
 const fs = require("fs");
-const appConfig = require("./config/config");
+const checkEnvironmentFunction = require("./libs/envChecker");
 const mqttFunctions = require("./libs/mqttFunctions");
 const puppeteerFunctions = require("./libs/puppeteerFunctions");
 
@@ -62,7 +62,8 @@ async function main() {
   fs.writeFileSync("./storage/devices.json", JSON.stringify(newDataArray));
 }
 
-console.log(`Starting to track ${appConfig.host}.`);
+checkEnvironmentFunction.checkEnvironmentVariables();
+console.log(`Starting to track ${process.env.router_url}.`);
 (function loop() {
   setTimeout(function () {
     try {
