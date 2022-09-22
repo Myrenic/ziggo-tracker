@@ -36,6 +36,7 @@ RUN npm install \
     && chown -R pptruser:pptruser ./node_modules \
     && chown -R pptruser:pptruser ./package.json \
     && chown -R pptruser:pptruser ./package-lock.json
+    && chown -R pptruser:pptruser ./storage/devices.json
 # If you are building your code for production
 # RUN npm ci --only=production
 USER pptruser
