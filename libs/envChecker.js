@@ -8,7 +8,7 @@ async function checkEnvironmentVariables() {
     "mqtt_port",
   ];
   vars.forEach((element) => {
-    if (!process.env.element) {
+    if (!element in process.env) {
       console.log(`${element} not set, aborting.`);
       process.exit();
     }
