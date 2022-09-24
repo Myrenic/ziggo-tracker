@@ -9,11 +9,11 @@ on:
   schedule:
     - cron: '22 18 * * *'
   push:
-    branches: [ "main" ]
+    branches: [ "fix-mqtt-function-if-more-then-1-change-is-made" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "fix-mqtt-function-if-more-then-1-change-is-made" ]
 
 env:
   # Use docker.io for Docker Hub if empty
