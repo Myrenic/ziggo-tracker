@@ -2,18 +2,16 @@ const mqtt = require("mqtt");
 
 // set mqtt info
 const clientId = `mqtt_ziggo_gigabox_tracker`;
-const connectUrl = `mqtt://${process.env.router_url}:${process.env.mqtt_port}`;
+const connectUrl = `mqtt://${process.env.mqtt_host}:${process.env.mqtt_port}`;
 
-function openMqttClient() {
-  return mqtt.connect(connectUrl, {
-    clientId,
-    clean: true,
-    connectTimeout: 4000,
-    username: process.env.mqtt_user,
-    password: process.env.mqtt_password,
-    reconnectPeriod: 1000,
-  });
-}
+const client = mqtt.connect(connectUrl, {
+  clientId,
+  clean: true,
+  connectTimeout: 4000,
+  username: process.env.mqtt_user,
+  password: process.env.mqtt_password,
+  reconnectPeriod: 1000,
+});
 
 // create new dev in HA format, outputs json
 function HomeAssistantFactory(Name, Mac) {
@@ -36,8 +34,20 @@ function HomeAssistantFactory(Name, Mac) {
   return JSON.stringify(device);
 }
 
-// create string from HomeAssistantFactory(Name, Mac) and send it to mqtt.
-function publishToHATopic(Name, Mac, client) {
+function PublicTopic(Mac, Name, State) {
+  // publish device state to ziggo topic
+  client.publish(
+    `ziggo-tracker/device_tracker/${Mac}_tracker/state`,
+    State,
+    { qos: 0, retain: true },
+    (error) => {
+      if (error) {
+        console.error(error);
+      }
+    }
+  );
+
+  // public device props to HA topic
   client.publish(
     `homeassistant/device_tracker/ziggo-tracker/${Mac}_tracker/config`,
     HomeAssistantFactory(Name, Mac),
@@ -50,40 +60,17 @@ function publishToHATopic(Name, Mac, client) {
   );
 }
 
-// send state to mqtt
-function publishToZiggoTopic(Mac, state, client) {
-  client.publish(
-    `ziggo-tracker/device_tracker/${Mac}_tracker/state`,
-    state,
-    { qos: 0, retain: true },
-    (error) => {
-      if (error) {
-        console.error(error);
+function updateAllMqttTopics(ListOfMacs, ListOfDeviceInfo, State) {
+  ListOfMacs.forEach((e) => {
+    // getting info of object
+    ListOfDeviceInfo.forEach((element) => {
+      if (element[1] == e) {
+        client.on("connect", () => {
+          PublicTopic(e.replaceAll(":", ""), element[0][0], State);
+        });
       }
-    }
-  );
-}
-
-function updateAllMqttTopics(Name, Mac, State) {
-  const client = openMqttClient();
-  publishToZiggoTopic(Mac, State, client);
-  publishToHATopic(Name, Mac, client);
-
-  var currentdate = new Date();
-  console.log(
-    currentdate.getDate() +
-      "/" +
-      (currentdate.getMonth() + 1) +
-      "/" +
-      currentdate.getFullYear() +
-      " @ " +
-      currentdate.getHours() +
-      ":" +
-      currentdate.getMinutes() +
-      ":" +
-      currentdate.getSeconds() +
-      ` ${Mac} (${Name}) has been updated to: "${State}"`
-  );
+    });
+  });
 }
 
 module.exports = { updateAllMqttTopics };

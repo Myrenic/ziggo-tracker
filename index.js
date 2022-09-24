@@ -32,31 +32,17 @@ async function main() {
   let GoneSinceLastScan = oldMacs.filter((x) => !newMacs.includes(x));
   let AppearedSinceLastScan = newMacs.filter((x) => !oldMacs.includes(x));
 
-  GoneSinceLastScan.forEach((e) => {
-    // getting info of object
-    oldDataArray.forEach((element) => {
-      if (element[1] == e) {
-        mqttFunctions.updateAllMqttTopics(
-          element[0][0],
-          e.replaceAll(":", ""),
-          "not_home"
-        ); // replace all to cleanup mac-format for mqtt support
-      }
-    });
-  });
-
-  AppearedSinceLastScan.forEach((e) => {
-    // getting info of object
-    newDataArray.forEach((element) => {
-      if (element[1] == e) {
-        mqttFunctions.updateAllMqttTopics(
-          element[0][0],
-          e.replaceAll(":", ""),
-          "home"
-        ); // replace all to cleanup mac-format for mqtt support
-      }
-    });
-  });
+  // call on mqttFunctions.js to process data
+  mqttFunctions.updateAllMqttTopics(
+    GoneSinceLastScan,
+    oldDataArray,
+    "not_home"
+  );
+  mqttFunctions.updateAllMqttTopics(
+    AppearedSinceLastScan,
+    newDataArray,
+    "home"
+  );
 
   // writing back new list of devices to json file
   fs.writeFileSync("./storage/devices.json", JSON.stringify(newDataArray));
